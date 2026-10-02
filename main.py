@@ -8,7 +8,7 @@ import requests
 import urllib.parse
 from push import push
 from log_utils import setup_logging
-from config import data, headers, cookies, READ_NUM, PUSH_METHOD, book, chapter
+from config import data, headers, cookies, READ_TIME_MIN, READ_TIME_MAX, READ_INTERVAL_MIN, READ_INTERVAL_MAX, PUSH_METHOD, book, chapter
 
 
 # 加密盐及其它默认值
@@ -97,12 +97,24 @@ def refresh_cookie(strict=True):
 
 # renewal 失败不等于当前阅读会话已失效；启动时刷新失败也继续尝试阅读。
 refresh_cookie(strict=False)
-index = 1
-lastTime = int(time.time()) - 30
-synckey_repair_attempts = 0
-logging.info(f"一共需要阅读 {READ_NUM} 次。")
 
-while index <= READ_NUM:
+# 本次运行的目标总阅读时长（秒），在配置区间内随机取一个值
+target_seconds = random.uniform(READ_TIME_MIN, READ_TIME_MAX) * 60
+logging.info(
+    "目标阅读时长 %.1f 分钟（范围 %g~%g 分钟），每次间隔 %d~%d 秒。",
+    target_seconds / 60,
+    READ_TIME_MIN,
+    READ_TIME_MAX,
+    READ_INTERVAL_MIN,
+    READ_INTERVAL_MAX,
+)
+
+read_count = 0
+read_seconds = 0
+lastTime = int(time.time()) - random.randint(READ_INTERVAL_MIN, READ_INTERVAL_MAX)
+synckey_repair_attempts = 0
+
+while read_seconds < target_seconds:
     data.pop('s')
     data['b'] = random.choice(book)
     data['c'] = random.choice(chapter)
@@ -114,7 +126,7 @@ while index <= READ_NUM:
     data['sg'] = hashlib.sha256(f"{data['ts']}{data['rn']}{KEY}".encode()).hexdigest()
     data['s'] = cal_hash(encode_data(data))
 
-    refresh_print(f"阅读进度: 第 {index}/{READ_NUM} 次，已完成 {(index - 1) * 0.5:.1f} 分钟")
+    refresh_print(f"阅读进度: 第 {read_count + 1} 次，已完成 {read_seconds / 60:.1f} / {target_seconds / 60:.1f} 分钟")
     logging.debug("data: %s", data)
     try:
         response = requests.post(
@@ -144,9 +156,10 @@ while index <= READ_NUM:
         if 'synckey' in resData:
             synckey_repair_attempts = 0
             lastTime = thisTime
-            index += 1
-            time.sleep(30)
-            refresh_print(f"阅读进度: 第 {min(index, READ_NUM + 1) - 1}/{READ_NUM} 次，已完成 {(index - 1) * 0.5:.1f} 分钟")
+            read_seconds += data['rt']
+            read_count += 1
+            time.sleep(random.uniform(READ_INTERVAL_MIN, READ_INTERVAL_MAX))
+            refresh_print(f"阅读进度: 第 {read_count} 次，已完成 {read_seconds / 60:.1f} / {target_seconds / 60:.1f} 分钟")
         else:
             synckey_repair_attempts += 1
             if synckey_repair_attempts > SYNCKEY_REPAIR_LIMIT:
@@ -184,10 +197,10 @@ while index <= READ_NUM:
             logging.warning("未识别为已知鉴权错误，保留现有刷新流程尝试恢复...")
         refresh_cookie()
 
-logging.info("阅读脚本已完成。")
+logging.info(f"阅读脚本已完成，共阅读 {read_count} 次，累计 {read_seconds / 60:.1f} 分钟。")
 
 if PUSH_METHOD not in (None, ''):
     logging.info("开始推送...")
-    push(f"微信读书自动阅读完成。\n阅读时长：{(index - 1) * 0.5} 分钟。", PUSH_METHOD, is_success=True)
+    push(f"微信读书自动阅读完成。\n阅读时长：{read_seconds / 60:.1f} 分钟。", PUSH_METHOD, is_success=True)
 else:
     logging.info("未配置推送渠道，跳过推送。")

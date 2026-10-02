@@ -1,4 +1,4 @@
-# config.py 自定义配置,包括阅读次数、推送token的填写
+# config.py 自定义配置,包括阅读时长、推送token的填写
 import os
 import re
 
@@ -7,8 +7,27 @@ import re
 默认使用本地值如果不存在从环境变量中获取值
 """
 
-# 阅读次数 默认40次/20分钟
-READ_NUM = int(os.getenv('READ_NUM') or 40)
+# ---- 每次阅读的间隔范围（秒）----
+# 两次请求之间随机 sleep 该范围内的秒数，均值约等于服务端单次计入的阅读时长
+READ_INTERVAL_MIN = int(os.getenv('READ_INTERVAL_MIN') or 20)
+READ_INTERVAL_MAX = int(os.getenv('READ_INTERVAL_MAX') or 40)
+
+# ---- 目标总阅读时长范围（分钟）——主开关 ----
+# 累计阅读时长达到区间内随机取到的目标后停止；想固定时长就把上下限填成相同的值
+# 例如 READ_TIME_MIN=20、READ_TIME_MAX=60，每次运行随机阅读 20~60 分钟
+READ_TIME_MIN = float(os.getenv('READ_TIME_MIN') or 0)
+READ_TIME_MAX = float(os.getenv('READ_TIME_MAX') or 0)
+
+# 兼容旧配置：未配置 READ_TIME_*（需两项都大于 0）时，按 READ_NUM × 30 秒换算目标时长
+# READ_NUM 已不推荐使用，仅作回退
+if READ_TIME_MIN <= 0 or READ_TIME_MAX <= 0:
+    READ_TIME_MIN = READ_TIME_MAX = int(os.getenv('READ_NUM') or 40) * 30 / 60
+
+# 非法配置回退：时长上下限颠倒时交换，间隔非法时用默认值
+if READ_TIME_MAX < READ_TIME_MIN:
+    READ_TIME_MIN, READ_TIME_MAX = READ_TIME_MAX, READ_TIME_MIN
+if READ_INTERVAL_MIN <= 0 or READ_INTERVAL_MAX <= 0 or READ_INTERVAL_MIN > READ_INTERVAL_MAX:
+    READ_INTERVAL_MIN, READ_INTERVAL_MAX = 20, 40
 # 需要推送时可选，可选pushplus、wxpusher、telegram
 PUSH_METHOD = "" or os.getenv('PUSH_METHOD')
 # pushplus推送时需填

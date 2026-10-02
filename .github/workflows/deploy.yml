@@ -50,7 +50,11 @@ jobs:
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         SERVERCHAN_SPT:  ${{ secrets.SERVERCHAN_SPT }}
-        READ_NUM: ${{ vars.READ_NUM }}  # 使用 Repository Variables
+        READ_TIME_MIN: ${{ vars.READ_TIME_MIN }}  # 目标总阅读时长范围（分钟，推荐）
+        READ_TIME_MAX: ${{ vars.READ_TIME_MAX }}
+        READ_INTERVAL_MIN: ${{ vars.READ_INTERVAL_MIN }}  # 每次阅读间隔范围（秒，可选）
+        READ_INTERVAL_MAX: ${{ vars.READ_INTERVAL_MAX }}
+        READ_NUM: ${{ vars.READ_NUM }}  # 已弃用：仅当未配 READ_TIME_* 时回退使用
 
       run: |
         python main.py

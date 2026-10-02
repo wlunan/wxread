@@ -6,7 +6,7 @@
 
 该脚本具备以下功能：
 
-- **阅读时长调节**：默认计入排行榜和挑战赛，时长可调节，默认为60分钟。
+- **阅读时长调节**：默认计入排行榜和挑战赛；设置目标总时长的随机区间，读够即停，请求间隔同样在区间内随机，节奏更接近真人。
 - **定时运行推送**：可部署在GitHub Action/服务器上，支持每天定时运行并推送结果到微信。
 - **Cookie自动更新**：脚本能自动获取并更新Cookie，一次部署后面无需其它操作。
 - **轻量化设计**：本脚本实现了轻量化的编写，部署服务器/GIthub action后到点运行，无需额外硬件。
@@ -36,7 +36,9 @@
   - `PUSHPLUS_TOKEN` or `WXPUSHER_SPT` or `TELEGRAM_BOT_TOKEN`&`TELEGRAM_CHAT_ID` or `SERVERCHAN_SPT`: 选择推送后填写对应token。
   
 - 在 **Variables** 部分，最下方添加变量：
-  - `READ_NUM`：设定每次阅读的目标次数。
+  - `READ_TIME_MIN` / `READ_TIME_MAX`：**主开关**，目标总阅读时长范围（分钟）。累计读够区间内随机取到的目标后停止；想固定时长就把两项填成相同的值（如 `20`/`20`）。
+  - `READ_INTERVAL_MIN` / `READ_INTERVAL_MAX`：每次阅读的间隔范围（秒）。默认 `20`/`40`，两次请求间随机等待，节奏更接近真人。
+  - `READ_NUM`：**已弃用（兼容保留）**，仅在未配置 `READ_TIME_*` 时按 `READ_NUM × 30 秒` 换算目标时长，建议改用 `READ_TIME_*`。
 
 
 - 基本释义：
@@ -44,14 +46,16 @@
 | key                        | Value                               | 说明                                                         | 属性      |
 | ------------------------- | ---------------------------------- | ------------------------------------------------------------ | --------- |
 | `WXREAD_CURL_BASH`         | `read` 接口 `curl_bash`数据 | **必填**，必须提供有效指令                                   | secrets   |
-| `READ_NUM`                 | 阅读次数（每次 30 秒）              | **可选**，阅读时长，默认 20 分钟                           | variables |
+| `READ_TIME_MIN` / `READ_TIME_MAX` | 目标总阅读时长范围（分钟） | **推荐**，例如 `20` / `60`，每次运行随机读够 20~60 分钟；想固定就把两项填相同值 | variables |
+| `READ_INTERVAL_MIN` / `READ_INTERVAL_MAX` | 每次阅读间隔范围（秒） | **可选**，默认 `20` / `40`（均值约 30 秒）；该值约等于单次计入的阅读时长，不建议大幅偏离 30 | variables |
+| `READ_NUM` | 阅读次数（每次 30 秒） | **已弃用（兼容保留）**，仅当未配置 `READ_TIME_*` 时回退，等价于 `READ_NUM × 30 秒` | variables |
 | `PUSH_METHOD`              | `pushplus`/`wxpusher`/`telegram`/`serverchan`    | **可选**，推送方式，4选1，默认不推送                                       |    secrets     |
 | `PUSHPLUS_TOKEN`           | PushPlus 的 token                   | 当 `PUSH_METHOD=pushplus` 时必填，[获取地址](https://www.pushplus.plus/uc.html) | secrets   |
 | `WXPUSHER_SPT`             | WxPusher 的token                    | 当 `PUSH_METHOD=wxpusher` 时必填，[获取地址](https://wxpusher.zjiecode.com/docs/#/?id=获取spt) | secrets   |
 | `TELEGRAM_BOT_TOKEN`  <br>`TELEGRAM_CHAT_ID`   <br>`http_proxy`/`https_proxy`（可选）| 群组id以及机器人token                 | 当 `PUSH_METHOD=telegram` 时必填，[配置文档](https://www.nodeseek.com/post-22475-1) | secrets   |
 | `SERVERCHAN_SPT`          | serverchan 的 SendKey               | 当 `PUSH_METHOD=serverchan` 时必填，[获取地址](https://sct.ftqq.com/sendkey) | secrets   |
 
-**重要：除了READ_NUM配置在varables，其它的都配置在secrets里面的；需要推送`PUSH_METHOD`是必填的。**
+**重要：`READ_TIME_*`、`READ_INTERVAL_*`（以及兼容用的 `READ_NUM`）配置在 variables，其它的都配置在 secrets 里面；需要推送时 `PUSH_METHOD` 是必填的。**
 
 ### 视频教程
 
@@ -72,8 +76,16 @@ services:
     environment:
       TZ: "Asia/Shanghai"
       
-      # 阅读次数（每次 30 秒），默认40为20分钟
-      READ_NUM: 40
+      # 目标总阅读时长范围（分钟）——主开关；想固定时长就把上下限填成相同的值
+      READ_TIME_MIN: 20
+      READ_TIME_MAX: 20
+      
+      # 每次阅读的间隔范围（秒）；默认 20~40，均值约 30
+      READ_INTERVAL_MIN: 20
+      READ_INTERVAL_MAX: 40
+      
+      # 兼容旧配置：仅当未配置 READ_TIME_* 时生效（READ_NUM × 30 秒），已弃用
+      # READ_NUM: 40
       
       # 微信读书 curl bash 命令（必需）
       # 使用 | 表示多行字符串，下一行开始粘贴完整的 curl 命令
@@ -127,11 +139,11 @@ docker-compose exec wxread python /app/main.py
 ***
 ## Attention 📢
 
-1. **签到次数调整**：只需签到完成挑战赛可以将`num`次数从120调整为2，每次`num`为30秒，200即100分钟。
+1. **只签到**：只需签到完成挑战赛，可将目标阅读时长设短，例如把 `READ_TIME_MIN`/`READ_TIME_MAX` 都设为 `1`（即 1 分钟）。
    
 2. **解决阅读时间问题**：对于issue中提出的“阅读时间没有增加”，“增加时间与刷的时间不对等”建议保留`config.py`中的【data】字段，默认阅读三体，其它书籍自行测试。
 
-3. **GitHub Action部署/本地部署**：主要配置config.py即可，Action部署使用环境变量，本地部署修改config.py里的阅读次数、headers、cookies即可。
+3. **GitHub Action部署/本地部署**：主要配置`config.py`即可，Action部署使用环境变量，本地部署修改`config.py`里的`READ_TIME_*`/`READ_INTERVAL_*`、headers、cookies即可。
 
 4. **推送**：pushplus推送偶尔出问题，猜测是GitHub action环境问题，增加重试机制。并增加wxpusher的极简推送方式。
 

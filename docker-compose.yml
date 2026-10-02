@@ -7,8 +7,16 @@ services:
     environment:
       TZ: "Asia/Shanghai"
 
-      # 阅读次数（每次 30 秒），默认40为20分钟
-      READ_NUM: 40
+      # 目标总阅读时长范围（分钟）——主开关；想固定时长就把上下限填成相同的值
+      READ_TIME_MIN: 20
+      READ_TIME_MAX: 20
+
+      # 每次阅读的间隔范围（秒）；默认 20~40，均值约 30
+      READ_INTERVAL_MIN: 20
+      READ_INTERVAL_MAX: 40
+
+      # 兼容旧配置：仅当未配置 READ_TIME_* 时生效（READ_NUM × 30 秒），已弃用
+      # READ_NUM: 40
 
       # 微信读书 curl bash 命令（必需）
       # 使用 | 表示多行字符串，下一行开始粘贴完整的 curl 命令
