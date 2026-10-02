@@ -116,30 +116,32 @@ services:
 ```
 
 **Cron 定时任务配置：**
-- `0 1 * * *` - 每天凌晨1点（默认）
+- `0 7 * * *` - 每天 07:00（默认，另叠加 0~20 分钟随机延迟）
 - `0 */6 * * *` - 每6小时
 - `30 8 * * *` - 每天早上8:30
 
 **步骤2：** 启动容器
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 **步骤3：** 查看日志和测试
 
 ```bash
 # 查看日志
-docker-compose logs -f
+docker compose logs -f
 
 # 测试运行
-docker-compose exec wxread python /app/main.py
+docker compose exec wxread python /app/main.py
 ```
 
 **Docker 说明：**
 - 镜像地址：`ghcr.io/wlunan/wxread:latest`
 - 支持多架构：linux/amd64 和 linux/arm64
 - 推送代码到仓库会自动构建最新镜像
+- 使用 Docker Compose **v2**（命令为 `docker compose`，带空格）；旧版 `docker-compose` 已弃用
+- `WXREAD_CURL_BASH` 里若含 `$`，需写成 `$$`：Docker Compose 会对 compose 文件做变量插值，单个 `$` 会被当成变量而丢失（报 `variable is not set` 警告）
 
 ***
 ## Attention 📢
