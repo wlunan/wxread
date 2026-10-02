@@ -7,8 +7,6 @@ WORKDIR /app
 ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-ENV PATH="/usr/local/bin:${PATH}"
-
 # 复制项目文件
 COPY main.py push.py config.py log_utils.py scheduler.py ./
 
@@ -17,10 +15,5 @@ RUN python -m pip install --no-cache-dir \
     'requests>=2.32.3' \
     'urllib3>=2.2.3'
 
-# 创建 cron 任务（每天凌晨1点执行）
-RUN echo "0 1 * * * cd /app && /usr/local/bin/python3 main.py >> /app/logs/\$(date +\%Y-\%m-\%d).log 2>&1" > /etc/cron.d/wxread-cron
-RUN chmod 0644 /etc/cron.d/wxread-cron
-RUN crontab /etc/cron.d/wxread-cron
-
-# 启动命令
+# 定时任务由 scheduler.py 负责（CRON_SCHEDULE、RUN_JITTER_SECONDS 由环境变量传入）
 CMD ["python", "scheduler.py"]
