@@ -29,11 +29,14 @@ def run_job():
         logging.error(f"运行任务时发生异常: {e}")
 
 if __name__ == "__main__":
-    cron_schedule = os.getenv("CRON_SCHEDULE", "0 1 * * *")
+    cron_schedule = os.getenv("CRON_SCHEDULE", "0 7 * * *")
     timezone = os.getenv("TZ", "Asia/Shanghai")
+    # 在基准时刻上随机延迟 0~jitter 秒，避免每天固定时刻触发
+    jitter = int(os.getenv("RUN_JITTER_SECONDS", 1200))
     
     logging.info(f"使用时区: {timezone}")
     logging.info(f"解析定时规则 (CRON_SCHEDULE): {cron_schedule}")
+    logging.info(f"随机抖动 (RUN_JITTER_SECONDS): 0~{jitter} 秒")
     
     try:
         # 将 cron 表达式解析为 CronTrigger 参数
@@ -48,15 +51,16 @@ if __name__ == "__main__":
             day=fields[2],
             month=fields[3],
             day_of_week=fields[4],
-            timezone=timezone
+            timezone=timezone,
+            jitter=jitter
         )
         
         scheduler = BlockingScheduler()
         scheduler.add_job(run_job, trigger)
         
-        # 计算下一次运行时间并记录日志
+        # 计算下一次运行时间并记录日志（jitter 每次取值不同，仅作参考）
         next_run = trigger.get_next_fire_time(None, datetime.now(trigger.timezone))
-        logging.info(f"调度器已启动。下一次任务执行时间: {next_run}")
+        logging.info(f"调度器已启动。下一次任务执行时间约: {next_run}")
         
         scheduler.start()
     except Exception as e:

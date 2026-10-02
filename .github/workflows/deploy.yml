@@ -6,10 +6,10 @@ concurrency:
 
 on:
   schedule:
-    # 凌晨任务：北京时间每天 01:07（UTC 前一天 17:07），避开 GitHub Actions 整点高峰
-    - cron: '7 17 * * *'
-    # 早间任务：北京时间每天 05:00（UTC 前一天 21:00）
-    #- cron: '0 21 * * *'
+    # 早间任务：北京时间每天 07:00（UTC 前一天 23:00），运行前再随机延迟 0~20 分钟
+    - cron: '0 23 * * *'
+    # 凌晨任务：北京时间每天 01:07（UTC 前一天 17:07）
+    #- cron: '7 17 * * *'
     # 午间任务：北京时间每天 11:40（UTC 03:40）
     #- cron: '40 3 * * *'
     # 晚间任务：北京时间每天 22:00（UTC 14:00）
@@ -40,6 +40,12 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install certifi==2024.8.30 charset-normalizer==3.4.0 idna==3.10 requests==2.32.3 urllib3==2.2.3
+
+    - name: Random start delay
+      shell: bash
+      env:
+        RUN_JITTER_SECONDS: ${{ vars.RUN_JITTER_SECONDS }}
+      run: sleep $((RANDOM % ${RUN_JITTER_SECONDS:-1200}))
 
     - name: Run deployment script
       env:

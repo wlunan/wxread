@@ -39,6 +39,7 @@
   - `READ_TIME_MIN` / `READ_TIME_MAX`：**主开关**，目标总阅读时长范围（分钟）。累计读够区间内随机取到的目标后停止；想固定时长就把两项填成相同的值（如 `20`/`20`）。
   - `READ_INTERVAL_MIN` / `READ_INTERVAL_MAX`：每次阅读的间隔范围（秒）。默认 `20`/`40`，两次请求间随机等待，节奏更接近真人。
   - `READ_NUM`：**已弃用（兼容保留）**，仅在未配置 `READ_TIME_*` 时按 `READ_NUM × 30 秒` 换算目标时长，建议改用 `READ_TIME_*`。
+  - `RUN_JITTER_SECONDS`：随机延迟幅度（秒），默认 `1200`（0~20 分钟）。基准时间为北京时间 07:00，实际会在 07:00~07:20 之间随机启动。
 
 
 - 基本释义：
@@ -49,13 +50,14 @@
 | `READ_TIME_MIN` / `READ_TIME_MAX` | 目标总阅读时长范围（分钟） | **推荐**，例如 `20` / `60`，每次运行随机读够 20~60 分钟；想固定就把两项填相同值 | variables |
 | `READ_INTERVAL_MIN` / `READ_INTERVAL_MAX` | 每次阅读间隔范围（秒） | **可选**，默认 `20` / `40`（均值约 30 秒）；该值约等于单次计入的阅读时长，不建议大幅偏离 30 | variables |
 | `READ_NUM` | 阅读次数（每次 30 秒） | **已弃用（兼容保留）**，仅当未配置 `READ_TIME_*` 时回退，等价于 `READ_NUM × 30 秒` | variables |
+| `RUN_JITTER_SECONDS` | 随机延迟秒数 | **可选**，默认 `1200`（0~20 分钟）；在基准时刻上随机延迟启动 | variables |
 | `PUSH_METHOD`              | `pushplus`/`wxpusher`/`telegram`/`serverchan`    | **可选**，推送方式，4选1，默认不推送                                       |    secrets     |
 | `PUSHPLUS_TOKEN`           | PushPlus 的 token                   | 当 `PUSH_METHOD=pushplus` 时必填，[获取地址](https://www.pushplus.plus/uc.html) | secrets   |
 | `WXPUSHER_SPT`             | WxPusher 的token                    | 当 `PUSH_METHOD=wxpusher` 时必填，[获取地址](https://wxpusher.zjiecode.com/docs/#/?id=获取spt) | secrets   |
 | `TELEGRAM_BOT_TOKEN`  <br>`TELEGRAM_CHAT_ID`   <br>`http_proxy`/`https_proxy`（可选）| 群组id以及机器人token                 | 当 `PUSH_METHOD=telegram` 时必填，[配置文档](https://www.nodeseek.com/post-22475-1) | secrets   |
 | `SERVERCHAN_SPT`          | serverchan 的 SendKey               | 当 `PUSH_METHOD=serverchan` 时必填，[获取地址](https://sct.ftqq.com/sendkey) | secrets   |
 
-**重要：`READ_TIME_*`、`READ_INTERVAL_*`（以及兼容用的 `READ_NUM`）配置在 variables，其它的都配置在 secrets 里面；需要推送时 `PUSH_METHOD` 是必填的。**
+**重要：`READ_TIME_*`、`READ_INTERVAL_*`、`RUN_JITTER_SECONDS`（以及兼容用的 `READ_NUM`）配置在 variables，其它的都配置在 secrets 里面；需要推送时 `PUSH_METHOD` 是必填的。**
 
 ### 视频教程
 
@@ -94,8 +96,11 @@ services:
         -H 'accept: application/json, text/plain, */*' \
         .....
       
-      # 定时任务时间（Cron 表达式）
-      CRON_SCHEDULE: "0 1 * * *"
+      # 定时任务时间（Cron 表达式，时区为 TZ）；默认上海 07:00
+      CRON_SCHEDULE: "0 7 * * *"
+      
+      # 在基准时刻上随机延迟 0~N 秒，默认 1200 秒（即 0~20 分钟）
+      RUN_JITTER_SECONDS: 1200
       
       # 可选配置：推送方式 (pushplus/wxpusher/telegram/serverchan)
       PUSH_METHOD: ""
