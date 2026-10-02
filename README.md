@@ -71,7 +71,7 @@
 ```yaml
 services:
   wxread:
-    image: ghcr.io/findmover/wxread:latest
+    image: ghcr.io/wlunan/wxread:latest
     container_name: wxread
     restart: unless-stopped
 
@@ -137,7 +137,7 @@ docker-compose exec wxread python /app/main.py
 ```
 
 **Docker 说明：**
-- 镜像地址：`ghcr.io/findmover/wxread:latest`
+- 镜像地址：`ghcr.io/wlunan/wxread:latest`
 - 支持多架构：linux/amd64 和 linux/arm64
 - 推送代码到仓库会自动构建最新镜像
 

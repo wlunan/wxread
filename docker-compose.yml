@@ -1,6 +1,6 @@
 services:
   wxread:
-    image: ghcr.io/findmover/wxread:latest
+    image: ghcr.io/wlunan/wxread:latest
     container_name: wxread
     restart: unless-stopped
 
